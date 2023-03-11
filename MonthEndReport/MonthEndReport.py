@@ -82,6 +82,7 @@ def clear_object():
 
     # 垃圾焚烧
     MonthEndReport.WasteIncinerationList = {}
+    set_m_gauge_value(global_self,0)
 
 
 # 开始处理文件
@@ -138,8 +139,8 @@ def start(self, path, wx):
     set_m_gauge_value(self, 0)
 
 
-def set_m_gauge_value(self, x):
-    self.m_gauge_进度条.SetValue(x)
+def set_m_gauge_value(global_self, x):
+    global_self.m_gauge_进度条.SetValue(x)
 
 
 # 更新水电用户数据
@@ -157,6 +158,7 @@ def read_hydropower_sort(path, file_list, wx):
     # 使用字典推导式，将MonthEndReport.hydropowerTotalDataList按照col_e_data顺序排列
     MonthEndReport.hydropowerTotalDataList = {key: MonthEndReport.hydropowerTotalDataList.get(key, None) for key in
                                               col_e_data}
+
     # 输出按照col_e_data顺序排列后的字典
     # print(MonthEndReport.hydropowerTotalDataList)
 
@@ -232,7 +234,8 @@ def write_end_table(path, list_file_name, wx):
                         num += 1
                         value: HydropowerTotal
                         if value is None:
-                            value = HydropowerTotal(key, 0, 0, 0, "", key, "")
+                            continue
+                            # value = HydropowerTotal(key, 0, 0, 0, "", key, "")
 
                         row_one = rows + "-" + str(num)
                         sheet.cell(temp_row, 2, prefix + value.name)

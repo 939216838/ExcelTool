@@ -4,6 +4,7 @@
 # 通用属性
 class CommonAttributes:
     # 购电量 powerPurchase 含税 taxIncluded 不含税 excludingTax 机组容量 Unit capacity 供应商名称sap_name 户号 Account
+    # 上年累计数值Cumulative value of last_year_
     def __init__(self, name, power_purchase, tax_included, tax_excluding, unit_capacity, sap_name, account):
         self.name = name
         # 购电量 powerPurchase
