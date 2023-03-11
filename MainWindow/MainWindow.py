@@ -84,7 +84,7 @@ class MainWindow(wx.Frame):
         event.Skip()
 
     def start(self, event):
-        self.m_gauge_进度条.SetValue(33)
+        self.m_gauge_进度条.SetValue(20)
 
         print("点击了开始按钮")
         # print(type(self))

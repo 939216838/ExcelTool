@@ -82,14 +82,13 @@ def clear_object():
 
     # 垃圾焚烧
     MonthEndReport.WasteIncinerationList = {}
-    set_m_gauge_value(global_self,0)
 
 
 # 开始处理文件
 def start(self, path, wx):
     global global_self
     global_self = self
-    set_m_gauge_value(self, 40)
+    set_m_gauge_value(self, 30)
     print("开始读取文件")
 
     if len(path) == 0:
@@ -108,33 +107,39 @@ def start(self, path, wx):
         prompt_box(wx, "提示", "路径不正确")
         return
 
-    set_m_gauge_value(self, 25)
+    set_m_gauge_value(self, 35)
 
     # # todo 先处理分布式结算信息预算
     name_map_list, name_account_map_list = \
         read_power_electricity_fees(path, list_file_name)
     #
-    set_m_gauge_value(self, 10)
+    set_m_gauge_value(self, 40)
     #
     # # todo 写入手工表
     write_manual_table(path, list_file_name, name_map_list, name_account_map_list)
     #
-    set_m_gauge_value(self, 75)
+    set_m_gauge_value(self, 45)
     #
     # # todo 读取手工表
     read_manual_table(path, list_file_name)
 
+    set_m_gauge_value(self, 60)
     # todo 读取购电费结算表-累计表
     read_hydropower_total(path, list_file_name, wx)
+
+    set_m_gauge_value(self, 70)
     # todo 更改顺序
     read_hydropower_sort(path, list_file_name, wx)
 
+    set_m_gauge_value(self, 85)
     # todo 写入水电的 农场废弃物  汪清凯迪绿色能源开发有限公司 垃圾焚烧的 只有二家 延吉天楹环保能源有限公司   敦化市中能环保电力有限公司
     write_end_table(path, list_file_name, wx)
 
     set_m_gauge_value(self, 90)
-    set_m_gauge_value(self, 100)
     time.sleep(1)
+    set_m_gauge_value(self, 100)
+    clear_object()
+    print("全部数据写入成功")
     prompt_box(wx, "已完成,要开心哦", "表格已经做好了,有什么需要跟我说哦.么么哒")
     set_m_gauge_value(self, 0)
 
@@ -204,7 +209,6 @@ def write_end_table(path, list_file_name, wx):
                     sheet.cell(temp_row, 4, value.sap_name)
                     sheet.cell(temp_row, 5, "其他")
                     sheet.cell(temp_row, 6, value.unit_capacity)
-
                     sheet.cell(temp_row, 11, float(value.power_purchase) / 10000)
                     sheet.cell(temp_row, 17, value.tax_included)
                     sheet.cell(temp_row, 20, value.tax_excluding)
@@ -267,7 +271,6 @@ def write_end_table(path, list_file_name, wx):
                         sheet.cell(temp_row, 2, prefix + value.name)
                         sheet.cell(temp_row, 3, row_one)
                         sheet.cell(temp_row, 4, value.sap_name)
-
                         sheet.cell(temp_row, 5, "其他")
                         sheet.cell(temp_row, 6, value.unit_capacity)
                         sheet.cell(temp_row, 11, float(value.power_purchase) / 10000)
@@ -305,7 +308,9 @@ def write_end_table(path, list_file_name, wx):
                     num = 0
                     rows = str(sheet.cell(temp_row, 3).value)
                     temp_row += 1
-                    residual_electricity_non_natural_person_list = MonthEndReport.residualElectricityNonNaturalPersonList
+                    residual_electricity_non_natural_person_list = \
+                        MonthEndReport.residualElectricityNonNaturalPersonList
+
                     for value in residual_electricity_non_natural_person_list:
                         num += 1
                         row_one = rows + "-" + str(num)
@@ -335,10 +340,8 @@ def write_end_table(path, list_file_name, wx):
                         sheet.cell(temp_row, 2, prefix + value.name)
                         sheet.cell(temp_row, 3, row_one)
                         sheet.cell(temp_row, 4, value.sap_name)
-
                         sheet.cell(temp_row, 5, "其他")
                         sheet.cell(temp_row, 6, value.unit_capacity)
-
                         sheet.cell(temp_row, 11, value.power_purchase)
                         sheet.cell(temp_row, 17, value.tax_included)
                         sheet.cell(temp_row, 20, value.tax_excluding)
@@ -366,8 +369,6 @@ def write_end_table(path, list_file_name, wx):
                     break
     workbook.save(route)
     workbook.close()
-    clear_object()
-    print("全部数据写入成功")
 
 
 # 读取水电累计表
@@ -383,10 +384,13 @@ def read_hydropower_total(path, list_file_name, wx):
         cell_two = sheet.cell(row, 2)
         if status:
             if str(cell_one.value).strip() != "水电合计" and str(cell_two.value).strip() != "None":
+                unit_capacity = ""
+                if sheet.cell(row, 3).value is not None:
+                    unit_capacity = float(sheet.cell(row, 3).value)
                 # 存储水电对象
                 hydropower_total = HydropowerTotal(str(sheet.cell(row, 2).value), sheet.cell(row, 4).value,
                                                    sheet.cell(row, 10).value, sheet.cell(row, 8).value,
-                                                   "", str(sheet.cell(row, 2).value), "")
+                                                   unit_capacity, str(sheet.cell(row, 2).value), "")
 
                 MonthEndReport.hydropowerTotalDataList[str(sheet.cell(row, 2).value)] = hydropower_total
             else:
@@ -401,7 +405,8 @@ def read_hydropower_total(path, list_file_name, wx):
                                                                                sheet.cell(row, 4).value,
                                                                                sheet.cell(row, 10).value,
                                                                                sheet.cell(row, 8).value,
-                                                                               "", str(sheet.cell(row, 2).value), "")
+                                                                               float(sheet.cell(row, 3).value),
+                                                                               str(sheet.cell(row, 2).value), "")
 
                 MonthEndReport.AgriculturalAndForestryWasteList[
                     str(sheet.cell(row, 2).value)] = agricultural_and_forestry_waste
@@ -413,7 +418,8 @@ def read_hydropower_total(path, list_file_name, wx):
                                                        power_purchase,
                                                        sheet.cell(row, 10).value,
                                                        sheet.cell(row, 8).value,
-                                                       "", str(sheet.cell(row, 2).value), "")
+                                                       float(sheet.cell(row, 3).value), str(sheet.cell(row, 2).value),
+                                                       "")
                 MonthEndReport.WasteIncinerationList[
                     str(sheet.cell(row, 2).value)] = waste_incineration
             case "敦化中能垃圾发电厂":
@@ -423,7 +429,8 @@ def read_hydropower_total(path, list_file_name, wx):
                                                        sheet.cell(row, 4).value,
                                                        sheet.cell(row, 10).value,
                                                        sheet.cell(row, 8).value,
-                                                       "", str(sheet.cell(row, 2).value), "")
+                                                       float(sheet.cell(row, 3).value), str(sheet.cell(row, 2).value),
+                                                       "")
                 MonthEndReport.WasteIncinerationList[
                     str(sheet.cell(row, 2).value)] = waste_incineration
                 break
