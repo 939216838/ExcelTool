@@ -1,0 +1,72 @@
+可以使用openpyxl库给单元格设置列宽、行高、居中、边框、字体等样式。在设置单元格样式之前，需要导入openpyxl的样式（`styles`）模块和字体（`Font`）类
+、对齐（`Alignment`）类和边框（`Border`）类。下面是一个示例代码，演示如何设置单元格样式：
+
+```python
+from openpyxl.styles import Alignment, Border, Font, Side
+from openpyxl.utils import get_column_letter
+
+# 设置单元格B2的列宽和行高
+ws.column_dimensions[get_column_letter(2)].width = 15
+ws.row_dimensions[2].height = 25
+
+# 设置单元格B2的对齐方式
+align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+ws['B2'].alignment = align
+
+# 设置单元格B2的边框样式
+border = Border(left=Side(style='thin'), right=Side(style='thin'), 
+                top=Side(style='thin'), bottom=Side(style='thin'))
+ws['B2'].border = border
+
+# 设置单元格B2的字体样式
+font = Font(name='微软雅黑', size=12, bold=True, italic=False, color='FF0000')
+ws['B2'].font = font
+
+# 设置区域C2:F2的样式
+for col in ws.iter_cols(min_col=3, max_col=6, min_row=2, max_row=2):
+    for cell in col:
+        cell.font = Font(name='微软雅黑', size=10, bold=False, italic=False, color='000000')
+        cell.border = border
+        cell.alignment = align
+```
+
+可以使用`ws.iter_cols()`方法和`ws.iter_rows()`方法迭代一片区域的单元格，以应用相同的样式模式。
+在上面的示例中，我们首先使用`ws.column_dimensions`
+和`ws.row_dimensions`属性设置单元格B2的列宽和行高，然后使用`get_column_letter()`函数将数字列号转换为字母列号。
+ 接下来，我们定义了一个`Alignment`对象来设置单元格B2的对齐方式，并使用`ws['B2'].alignment`属性将其应用于单元格B2。
+  然后，我们定义了一个`Border`对象来设置单元格B2的边框，并使用`ws['B2'].border`属性将其应用于单元格B2。
+  接下来，我们定义了一个`Font`对象来设置单元格B2的字体样式，并使用`ws['B2'].font`属性将其应用于单元格B2。
+  最后，我们使用`ws.iter_cols()`方法迭代单元格区域C2:F2，并设置其边框、字体和对齐方式。
+
+给一个片区域设置样式可以采用Numpy + Pandas + openpyxl的方式。示例代码如下：
+
+```python
+import pandas as pd
+import numpy as np
+from openpyxl.styles import Alignment, Border, Font, Side
+from openpyxl.utils import get_column_letter
+from openpyxl.utils.dataframe import dataframe_to_rows
+
+df = pd.read_excel('source.xlsx')  # 读取数据
+df.replace(np.nan, '', inplace=True)  # 将空值替换为空字符
+df_len = len(df)  # 行数
+col_len = len(df.columns)  # 列数
+
+font = Font(name='微软雅黑', size=10, bold=False, italic=False, color='000000')
+align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+border = Border(left=Side(style='thin'), right=Side(style='thin'), 
+                top=Side(style='thin'), bottom=Side(style='thin'))
+
+for row in dataframe_to_rows(df, index=False, header=False):
+    ws.append(row)
+
+for col in ws.iter_cols(min_col=1, max_col=col_len, min_row=1, max_row=df_len):
+    for cell in col:
+        cell.font = font
+        cell.border = border
+        cell.alignment = align
+```
+
+在上面的示例中，我们首先读取Excel数据并将空值替换为空字符，然后获取DataFrame的行数和列数。
+ 接下来，我们定义了一个`Font`对象、`Alignment`对象和`Border`对象，用于设置单元格的字体、对齐方式和边框样式。
+  接着，我们将DataFrame数据逐行添加到Excel文件中，并使用调用`ws.iter_cols()`方法迭代区域的单元格，并在每个单元格上应用样式。

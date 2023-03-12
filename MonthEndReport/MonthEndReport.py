@@ -8,6 +8,11 @@ from openpyxl.reader.excel import load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.worksheet.worksheet import Worksheet
 
+from openpyxl.styles import Alignment, Border, Font, Side
+from openpyxl.utils import get_column_letter
+import openpyxl
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.dimensions import Dimension, DimensionHolder, ColumnDimension, RowDimension
 from . import SolarPower
 from .SolarPower import ResidualElectricityNonNaturalPerson, FullOnlineNaturalPerson, FullOnlineNonNaturalPerson, \
     ResidualElectricityNaturalPerson, SettlementInformation, HydropowerTotal, AgriculturalAndForestryWaste, \
@@ -51,6 +56,14 @@ class MonthEndReport:
 def get_column():
     column = 4 + (int(MonthEndReport.month) - 1) * 3
     return column
+
+
+# 定义上年累计对象
+class LastYearObj:
+    name = ""
+    last_year_power_purchase = 0.0
+    last_year_tax_included = 0.0
+    last_year_tax_excluding = 0.0
 
 
 def clear_object():
@@ -109,33 +122,36 @@ def start(self, path, wx):
 
     set_m_gauge_value(self, 35)
 
-    # # todo 先处理分布式结算信息预算
+    #   todo 1.先处理分布式结算信息预算
     name_map_list, name_account_map_list = \
         read_power_electricity_fees(path, list_file_name)
     #
     set_m_gauge_value(self, 40)
     #
-    # # todo 写入手工表
+    #   todo 2.写入手工表
     write_manual_table(path, list_file_name, name_map_list, name_account_map_list)
     #
     set_m_gauge_value(self, 45)
     #
-    # # todo 读取手工表
+    # # todo 3.读取手工表
     read_manual_table(path, list_file_name)
 
     set_m_gauge_value(self, 60)
-    # todo 读取购电费结算表-累计表
+    # todo 4.读取购电费结算表-累计表
     read_hydropower_total(path, list_file_name, wx)
 
     set_m_gauge_value(self, 70)
-    # todo 更改顺序
+    # todo 5.更改顺序
     read_hydropower_sort(path, list_file_name, wx)
 
     set_m_gauge_value(self, 85)
-    # todo 写入水电的 农场废弃物  汪清凯迪绿色能源开发有限公司 垃圾焚烧的 只有二家 延吉天楹环保能源有限公司   敦化市中能环保电力有限公司
-    write_end_table(path, list_file_name, wx)
 
+    # TODO 6.读取上年累计.
+    last_year_map_list = read_last_year_tatle(path, list_file_name)
     set_m_gauge_value(self, 90)
+
+    # todo 7.写入水电的 农场废弃物  汪清凯迪绿色能源开发有限公司 垃圾焚烧的 只有二家 延吉天楹环保能源有限公司   敦化市中能环保电力有限公司
+    write_end_table(path, list_file_name, last_year_map_list)
     time.sleep(1)
     set_m_gauge_value(self, 100)
     clear_object()
@@ -144,16 +160,36 @@ def start(self, path, wx):
     set_m_gauge_value(self, 0)
 
 
+# 读取上年累计表格,以及样式
+def read_last_year_tatle(path, list_file_name):
+    sheet, manual_table_name, workbook = get_workbook_sheet(list_file_name, path, "历史表样", "二级市场购电执行情况表",
+                                                            True, True)
+    max_row = sheet.max_row
+    last_year_map_list = {}
+
+    for row in range(14, max_row):
+        obj = LastYearObj()
+        obj.name = sheet["B" + str(row)].value
+        obj.last_year_power_purchase = sheet["K" + str(row)].value
+        obj.last_year_tax_included = sheet["Q" + str(row)].value
+        obj.last_year_tax_excluding = sheet["T" + str(row)].value
+        last_year_map_list[sheet["B" + str(row)].value.strip()] = obj
+        value: str = sheet.cell(row, 2).value
+        if value.find("其他能源含从公司系统外购电") >-1:
+            break
+
+    workbook.close()
+    return last_year_map_list
+
+
 def set_m_gauge_value(global_self, x):
     global_self.m_gauge_进度条.SetValue(x)
 
 
 # 更新水电用户数据
 def read_hydropower_sort(path, file_list, wx):
-    route, manual_table_name = get_file_path(path, file_list, "报表工作表")
-    workbook = load_workbook(route, read_only=True)
-    sheet_name = get_sheet_name_by_workbook(workbook, "排序")
-    sheet = workbook.get_sheet_by_name(sheet_name)
+    sheet, manual_table_name, workbook = get_workbook_sheet(file_list, path, "报表工作表", "排序", True, False)
+
     col_e_data = []
 
     for row in sheet.iter_rows(min_row=2, min_col=5, max_col=5, max_row=sheet.max_row, values_only=True):
@@ -163,13 +199,13 @@ def read_hydropower_sort(path, file_list, wx):
     # 使用字典推导式，将MonthEndReport.hydropowerTotalDataList按照col_e_data顺序排列
     MonthEndReport.hydropowerTotalDataList = {key: MonthEndReport.hydropowerTotalDataList.get(key, None) for key in
                                               col_e_data}
-
+    workbook.close()
     # 输出按照col_e_data顺序排列后的字典
     # print(MonthEndReport.hydropowerTotalDataList)
 
 
 # 写入最终表
-def write_end_table(path, list_file_name, wx):
+def write_end_table(path, list_file_name, last_year_map_list):
     route, manual_table_name = get_file_path(path, list_file_name, "空白表样")
     print(route)
     print(manual_table_name)
@@ -193,6 +229,7 @@ def write_end_table(path, list_file_name, wx):
                 map_len = len(MonthEndReport.AgriculturalAndForestryWasteList)
                 sheet.insert_rows(row + 1, map_len)
                 num = 0
+                template_row = row
                 rows = str(sheet.cell(row, 3).value)
                 agricultural_and_forestry_waste_list = MonthEndReport.AgriculturalAndForestryWasteList
                 temp_row = row + 1
@@ -212,6 +249,16 @@ def write_end_table(path, list_file_name, wx):
                     sheet.cell(temp_row, 11, float(value.power_purchase) / 10000)
                     sheet.cell(temp_row, 17, value.tax_included)
                     sheet.cell(temp_row, 20, value.tax_excluding)
+                    obj = last_year_map_list.get(key, None)
+                    if obj is None:
+                        sheet.cell(temp_row, 12, 0)
+                        sheet.cell(temp_row, 18, 0)
+                        sheet.cell(temp_row, 21, 0)
+                    else:
+                        sheet.cell(temp_row, 12, obj.last_year_power_purchase)
+                        sheet.cell(temp_row, 18, obj.last_year_tax_included)
+                        sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
+                    copy_row_style(sheet, temp_row, template_row)
 
                 current_status = "None"
                 continue
@@ -227,9 +274,14 @@ def write_end_table(path, list_file_name, wx):
 
             match current_status:
                 case "水电":
-                    map_len = len(MonthEndReport.hydropowerTotalDataList)
+                    # 获得值不是None的字典长度
+                    map_len = len([k for k in MonthEndReport.hydropowerTotalDataList if
+                                   MonthEndReport.hydropowerTotalDataList[k] is not None])
                     sheet.insert_rows(row, map_len)
                     num = 0
+                    # 水电的那一行,取Font, 格式
+                    template_row = row - 1
+
                     rows = str(sheet.cell(row - 1, 3).value)
                     hydropower_total_data_list = MonthEndReport.hydropowerTotalDataList
                     temp_row = row
@@ -251,6 +303,16 @@ def write_end_table(path, list_file_name, wx):
                         sheet.cell(temp_row, 11, float(value.power_purchase) / 10000)
                         sheet.cell(temp_row, 17, value.tax_included)
                         sheet.cell(temp_row, 20, value.tax_excluding)
+                        obj = last_year_map_list.get(key, None)
+                        if obj is None:
+                            sheet.cell(temp_row, 12, 0)
+                            sheet.cell(temp_row, 18, 0)
+                            sheet.cell(temp_row, 21, 0)
+                        else:
+                            sheet.cell(temp_row, 12, obj.last_year_power_purchase)
+                            sheet.cell(temp_row, 18, obj.last_year_tax_included)
+                            sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
+                        copy_row_style(sheet, temp_row, template_row)
                         temp_row += 1
                     current_status = "None"
 
@@ -258,6 +320,7 @@ def write_end_table(path, list_file_name, wx):
                     map_len = len(MonthEndReport.WasteIncinerationList)
                     sheet.insert_rows(row, map_len)
                     num = 0
+                    template_row = row - 1
                     rows = str(sheet.cell(row - 1, 3).value)
                     waste_incineration_list = MonthEndReport.WasteIncinerationList
                     temp_row = row
@@ -276,6 +339,16 @@ def write_end_table(path, list_file_name, wx):
                         sheet.cell(temp_row, 11, float(value.power_purchase) / 10000)
                         sheet.cell(temp_row, 17, value.tax_included)
                         sheet.cell(temp_row, 20, value.tax_excluding)
+                        obj = last_year_map_list.get(key, None)
+                        if obj is None:
+                            sheet.cell(temp_row, 12, 0)
+                            sheet.cell(temp_row, 18, 0)
+                            sheet.cell(temp_row, 21, 0)
+                        else:
+                            sheet.cell(temp_row, 12, obj.last_year_power_purchase)
+                            sheet.cell(temp_row, 18, obj.last_year_tax_included)
+                            sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
+                        copy_row_style(sheet, temp_row, template_row)
                         temp_row += 1
                     current_status = "None"
 
@@ -285,6 +358,7 @@ def write_end_table(path, list_file_name, wx):
                     map_len = len(MonthEndReport.residualElectricityNaturalPersonList)
                     sheet.insert_rows(row + 1, map_len)
                     num = 0
+                    template_row = row
                     rows = str(sheet.cell(row, 3).value)
                     residual_electricity_natural_person_list = MonthEndReport.residualElectricityNaturalPersonList
                     temp_row = row + 1
@@ -299,9 +373,21 @@ def write_end_table(path, list_file_name, wx):
                         sheet.cell(temp_row, 11, value.power_purchase)
                         sheet.cell(temp_row, 17, value.tax_included)
                         sheet.cell(temp_row, 20, value.tax_excluding)
+                        obj = last_year_map_list.get(value.name, None)
+                        if obj is None:
+                            sheet.cell(temp_row, 12, 0)
+                            sheet.cell(temp_row, 18, 0)
+                            sheet.cell(temp_row, 21, 0)
+                        else:
+                            sheet.cell(temp_row, 12, obj.last_year_power_purchase)
+                            sheet.cell(temp_row, 18, obj.last_year_tax_included)
+                            sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
+                        copy_row_style(sheet, temp_row, template_row)
                         temp_row += 1
 
                     # 当前行是非自然人
+
+                    sheet.row_dimensions[temp_row].height = sheet.row_dimensions[template_row].height
                     map_len = len(MonthEndReport.residualElectricityNonNaturalPersonList)
                     sheet.insert_rows(temp_row + 1, map_len)
 
@@ -323,14 +409,29 @@ def write_end_table(path, list_file_name, wx):
                         sheet.cell(temp_row, 11, value.power_purchase)
                         sheet.cell(temp_row, 17, value.tax_included)
                         sheet.cell(temp_row, 20, value.tax_excluding)
+                        obj = last_year_map_list.get(value.name, None)
+                        if obj is None:
+                            sheet.cell(temp_row, 12, 0)
+                            sheet.cell(temp_row, 18, 0)
+                            sheet.cell(temp_row, 21, 0)
+                        else:
+                            sheet.cell(temp_row, 12, obj.last_year_power_purchase)
+                            sheet.cell(temp_row, 18, obj.last_year_tax_included)
+                            sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
+                        copy_row_style(sheet, temp_row, template_row)
                         temp_row += 1
+                    sheet.row_dimensions[temp_row].height = sheet.row_dimensions[template_row].height
                     current_status = "None"
 
                 case "全额上网":
+                    sheet.row_dimensions[row].height = sheet.row_dimensions[row - 2].height
+                    sheet.row_dimensions[row - 1].height = sheet.row_dimensions[row - 2].height
+
                     # 当前行是 其中自然人
                     map_len = len(MonthEndReport.fullOnlineNaturalPersonList)
                     sheet.insert_rows(row + 1, map_len)
                     num = 0
+                    template_row = row
                     rows = str(sheet.cell(row, 3).value)
                     full_online_natural_person_list = MonthEndReport.fullOnlineNaturalPersonList
                     temp_row = row + 1
@@ -345,8 +446,18 @@ def write_end_table(path, list_file_name, wx):
                         sheet.cell(temp_row, 11, value.power_purchase)
                         sheet.cell(temp_row, 17, value.tax_included)
                         sheet.cell(temp_row, 20, value.tax_excluding)
+                        obj = last_year_map_list.get(value.name, None)
+                        if obj is None:
+                            sheet.cell(temp_row, 12, 0)
+                            sheet.cell(temp_row, 18, 0)
+                            sheet.cell(temp_row, 21, 0)
+                        else:
+                            sheet.cell(temp_row, 12, obj.last_year_power_purchase)
+                            sheet.cell(temp_row, 18, obj.last_year_tax_included)
+                            sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
+                        copy_row_style(sheet, temp_row, template_row)
                         temp_row += 1
-
+                    sheet.row_dimensions[temp_row].height = sheet.row_dimensions[template_row].height
                     # 当前行是非自然人
                     map_len = len(MonthEndReport.fullOnlineNonNaturalPersonList)
                     sheet.insert_rows(temp_row + 1, map_len)
@@ -365,18 +476,41 @@ def write_end_table(path, list_file_name, wx):
                         sheet.cell(temp_row, 11, value.power_purchase)
                         sheet.cell(temp_row, 17, value.tax_included)
                         sheet.cell(temp_row, 20, value.tax_excluding)
+                        obj = last_year_map_list.get(value.name, None)
+                        if obj is None:
+                            sheet.cell(temp_row, 12, 0)
+                            sheet.cell(temp_row, 18, 0)
+                            sheet.cell(temp_row, 21, 0)
+                        else:
+                            sheet.cell(temp_row, 12, obj.last_year_power_purchase)
+                            sheet.cell(temp_row, 18, obj.last_year_tax_included)
+                            sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
+                        copy_row_style(sheet, temp_row, template_row)
                         temp_row += 1
+                    sheet.row_dimensions[temp_row].height = sheet.row_dimensions[template_row].height
                     break
     workbook.save(route)
     workbook.close()
 
 
+# 按行复制单元格格式
+def copy_row_style(sheet, temp_row, template_row):
+    sheet: Worksheet
+    for col in range(1, sheet.max_column + 1):
+        template_cell = sheet.cell(row=template_row, column=col)
+        new_cell = sheet.cell(row=temp_row, column=col)
+        new_cell.border = template_cell.border.copy()
+        new_cell.fill = template_cell.fill.copy()
+        new_cell.font = template_cell.font.copy()
+        new_cell.number_format = template_cell.number_format
+        new_cell.protection = template_cell.protection.copy()
+        new_cell.alignment = template_cell.alignment.copy()
+    sheet.row_dimensions[temp_row].height = sheet.row_dimensions[9].height
+
+
 # 读取水电累计表
 def read_hydropower_total(path, list_file_name, wx):
-    route, manual_table_name = get_file_path(path, list_file_name, "购电费结算表")
-    workbook = load_workbook(route, read_only=True, data_only=True)
-    sheet_name = get_sheet_name_by_workbook(workbook, "累计")
-    sheet = workbook.get_sheet_by_name(sheet_name)
+    sheet, manual_table_name, workbook = get_workbook_sheet(list_file_name, path, "购电费结算表", "累计", True, True)
     max_row = sheet.max_row + 1
     status = True
     for row in range(5, max_row):
@@ -434,6 +568,16 @@ def read_hydropower_total(path, list_file_name, wx):
                 MonthEndReport.WasteIncinerationList[
                     str(sheet.cell(row, 2).value)] = waste_incineration
                 break
+    workbook.close()
+
+
+# 封装 根据文件名,sheet名,获取表格操作对象
+def get_workbook_sheet(list_file_name, path, file_name, sheet_name, read_only, data_only):
+    route, manual_table_name = get_file_path(path, list_file_name, file_name)
+    workbook = load_workbook(route, read_only=read_only, data_only=data_only, )
+    sheet_name = get_sheet_name_by_workbook(workbook, sheet_name)
+    sheet = workbook.get_sheet_by_name(sheet_name)
+    return sheet, manual_table_name, workbook
 
 
 # 写入手工表
@@ -593,17 +737,12 @@ def write_formula(row, sheet):
 
 # 读取电量电费表,获得当前月份最终数据
 def read_power_electricity_fees(path, file_list):
-    route, file_name = get_file_path(path, file_list, "分布式结算信息")
-
+    sheet, file_name, workbook = get_workbook_sheet(file_list, path, "分布式结算信息", "电量电费", True, True)
     MonthEndReport.month = file_name[-9:-7]
     MonthEndReport.year = file_name[-13:-9]
     print("MonthEndReport.month=", MonthEndReport.month)
     print("MonthEndReport.year=", MonthEndReport.year)
 
-    # 加载excel文件
-    workbook = load_workbook(route, read_only=True, data_only=True)
-    work_sheet_name = get_sheet_name_by_workbook(workbook, "电量电费")
-    sheet: Worksheet = workbook[work_sheet_name]
     max_row = sheet.max_row
 
     yellow_fill: PatternFill = PatternFill("solid", fgColor="FFFFFF00", bgColor="FFFFFF00")
