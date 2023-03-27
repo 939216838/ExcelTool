@@ -175,7 +175,7 @@ def read_last_year_tatle(path, list_file_name):
         obj.last_year_tax_excluding = sheet["T" + str(row)].value
         last_year_map_list[sheet["B" + str(row)].value.strip()] = obj
         value: str = sheet.cell(row, 2).value
-        if value.find("其他能源含从公司系统外购电") >-1:
+        if value.find("其他能源含从公司系统外购电") > -1:
             break
 
     workbook.close()
