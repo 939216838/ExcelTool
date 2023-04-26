@@ -1,8 +1,13 @@
 # 这是一个示例 Python 脚本。
 import time
-
+import openpyxl
 import win32con
 import win32gui
+from openpyxl.cell import Cell
+from openpyxl.reader.excel import load_workbook
+from openpyxl.styles import PatternFill
+from openpyxl.workbook import Workbook
+from openpyxl.worksheet.worksheet import Worksheet
 
 
 # 按 Shift+F10 执行或将其替换为您的代码。
@@ -16,7 +21,7 @@ def print_hi(name):
 
 def tiaozheng_size():
     print("调整大小")
-    window = win32gui.FindWindow(None, "AI问答智能助手")
+    window = win32gui.FindWindow(None, "AI问答聊")
     # 获得窗口句柄
     rect = win32gui.GetWindowRect(window)
     # 将窗口放到最前
@@ -31,6 +36,8 @@ def tiaozheng_size():
 # 按间距中的绿色按钮以运行脚本。
 if __name__ == '__main__':
     tiaozheng_size()
+
+
     pass
     # print_hi('PyCharm')
     # s1 = {"Google", "Runoob", "Taobao"}
@@ -201,4 +208,3 @@ if __name__ == '__main__':
     #     print(hydropowerTotalDataList)
     #
     #
-

@@ -164,6 +164,7 @@ def start(self, path, wx):
 def read_last_year_tatle(path, list_file_name):
     sheet, manual_table_name, workbook = get_workbook_sheet(list_file_name, path, "历史表样", "二级市场购电执行情况表",
                                                             True, True)
+    sheet: Worksheet
     max_row = sheet.max_row
     last_year_map_list = {}
 
@@ -272,223 +273,222 @@ def write_end_table(path, list_file_name, last_year_map_list):
                 current_status = "全额上网"
                 continue
 
-            match current_status:
-                case "水电":
-                    # 获得值不是None的字典长度
-                    map_len = len([k for k in MonthEndReport.hydropowerTotalDataList if
-                                   MonthEndReport.hydropowerTotalDataList[k] is not None])
-                    sheet.insert_rows(row, map_len)
-                    num = 0
-                    # 水电的那一行,取Font, 格式
-                    template_row = row - 1
+            if current_status == "水电":
+                # 获得值不是None的字典长度
+                map_len = len([k for k in MonthEndReport.hydropowerTotalDataList if
+                               MonthEndReport.hydropowerTotalDataList[k] is not None])
+                sheet.insert_rows(row, map_len)
+                num = 0
+                # 水电的那一行,取Font, 格式
+                template_row = row - 1
 
-                    rows = str(sheet.cell(row - 1, 3).value)
-                    hydropower_total_data_list = MonthEndReport.hydropowerTotalDataList
-                    temp_row = row
-                    for key in hydropower_total_data_list.keys():
-                        value = hydropower_total_data_list.get(key)
-                        num += 1
-                        value: HydropowerTotal
-                        if value is None:
-                            continue
-                            # value = HydropowerTotal(key, 0, 0, 0, "", key, "")
+                rows = str(sheet.cell(row - 1, 3).value)
+                hydropower_total_data_list = MonthEndReport.hydropowerTotalDataList
+                temp_row = row
+                for key in hydropower_total_data_list.keys():
+                    value = hydropower_total_data_list.get(key)
+                    num += 1
+                    value: HydropowerTotal
+                    if value is None:
+                        continue
+                        # value = HydropowerTotal(key, 0, 0, 0, "", key, "")
 
-                        row_one = rows + "-" + str(num)
-                        sheet.cell(temp_row, 2, prefix + value.name)
-                        sheet.cell(temp_row, 3, row_one)
-                        sheet.cell(temp_row, 4, value.sap_name)
+                    row_one = rows + "-" + str(num)
+                    sheet.cell(temp_row, 2, prefix + value.name)
+                    sheet.cell(temp_row, 3, row_one)
+                    sheet.cell(temp_row, 4, value.sap_name)
 
-                        sheet.cell(temp_row, 5, "其他")
-                        sheet.cell(temp_row, 6, value.unit_capacity)
-                        sheet.cell(temp_row, 11, float(value.power_purchase) / 10000)
-                        sheet.cell(temp_row, 17, value.tax_included)
-                        sheet.cell(temp_row, 20, value.tax_excluding)
-                        obj = last_year_map_list.get(key, None)
-                        if obj is None:
-                            sheet.cell(temp_row, 12, 0)
-                            sheet.cell(temp_row, 18, 0)
-                            sheet.cell(temp_row, 21, 0)
-                        else:
-                            sheet.cell(temp_row, 12, obj.last_year_power_purchase)
-                            sheet.cell(temp_row, 18, obj.last_year_tax_included)
-                            sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
-                        copy_row_style(sheet, temp_row, template_row)
-                        temp_row += 1
-                    current_status = "None"
-
-                case "垃圾焚烧":
-                    map_len = len(MonthEndReport.WasteIncinerationList)
-                    sheet.insert_rows(row, map_len)
-                    num = 0
-                    template_row = row - 1
-                    rows = str(sheet.cell(row - 1, 3).value)
-                    waste_incineration_list = MonthEndReport.WasteIncinerationList
-                    temp_row = row
-                    for key in waste_incineration_list.keys():
-                        value = waste_incineration_list.get(key)
-                        num += 1
-                        if value is None:
-                            value = HydropowerTotal(key, 0, 0, 0, "", key, "")
-
-                        row_one = rows + "-" + str(num)
-                        sheet.cell(temp_row, 2, prefix + value.name)
-                        sheet.cell(temp_row, 3, row_one)
-                        sheet.cell(temp_row, 4, value.sap_name)
-                        sheet.cell(temp_row, 5, "其他")
-                        sheet.cell(temp_row, 6, value.unit_capacity)
-                        sheet.cell(temp_row, 11, float(value.power_purchase) / 10000)
-                        sheet.cell(temp_row, 17, value.tax_included)
-                        sheet.cell(temp_row, 20, value.tax_excluding)
-                        obj = last_year_map_list.get(key, None)
-                        if obj is None:
-                            sheet.cell(temp_row, 12, 0)
-                            sheet.cell(temp_row, 18, 0)
-                            sheet.cell(temp_row, 21, 0)
-                        else:
-                            sheet.cell(temp_row, 12, obj.last_year_power_purchase)
-                            sheet.cell(temp_row, 18, obj.last_year_tax_included)
-                            sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
-                        copy_row_style(sheet, temp_row, template_row)
-                        temp_row += 1
-                    current_status = "None"
-
-                    pass
-                case "自发自用，余电上网":
-                    # 当前行是 其中自然人
-                    map_len = len(MonthEndReport.residualElectricityNaturalPersonList)
-                    sheet.insert_rows(row + 1, map_len)
-                    num = 0
-                    template_row = row
-                    rows = str(sheet.cell(row, 3).value)
-                    residual_electricity_natural_person_list = MonthEndReport.residualElectricityNaturalPersonList
-                    temp_row = row + 1
-                    for value in residual_electricity_natural_person_list:
-                        num += 1
-                        row_one = rows + "-" + str(num)
-                        sheet.cell(temp_row, 2, prefix + value.name)
-                        sheet.cell(temp_row, 3, row_one)
-                        sheet.cell(temp_row, 4, value.sap_name)
-                        sheet.cell(temp_row, 5, "其他")
-                        sheet.cell(temp_row, 6, value.unit_capacity)
-                        sheet.cell(temp_row, 11, value.power_purchase)
-                        sheet.cell(temp_row, 17, value.tax_included)
-                        sheet.cell(temp_row, 20, value.tax_excluding)
-                        obj = last_year_map_list.get(value.name, None)
-                        if obj is None:
-                            sheet.cell(temp_row, 12, 0)
-                            sheet.cell(temp_row, 18, 0)
-                            sheet.cell(temp_row, 21, 0)
-                        else:
-                            sheet.cell(temp_row, 12, obj.last_year_power_purchase)
-                            sheet.cell(temp_row, 18, obj.last_year_tax_included)
-                            sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
-                        copy_row_style(sheet, temp_row, template_row)
-                        temp_row += 1
-
-                    # 当前行是非自然人
-
-                    sheet.row_dimensions[temp_row].height = sheet.row_dimensions[template_row].height
-                    map_len = len(MonthEndReport.residualElectricityNonNaturalPersonList)
-                    sheet.insert_rows(temp_row + 1, map_len)
-
-                    num = 0
-                    rows = str(sheet.cell(temp_row, 3).value)
+                    sheet.cell(temp_row, 5, "其他")
+                    sheet.cell(temp_row, 6, value.unit_capacity)
+                    sheet.cell(temp_row, 11, float(value.power_purchase) / 10000)
+                    sheet.cell(temp_row, 17, value.tax_included)
+                    sheet.cell(temp_row, 20, value.tax_excluding)
+                    obj = last_year_map_list.get(key, None)
+                    if obj is None:
+                        sheet.cell(temp_row, 12, 0)
+                        sheet.cell(temp_row, 18, 0)
+                        sheet.cell(temp_row, 21, 0)
+                    else:
+                        sheet.cell(temp_row, 12, obj.last_year_power_purchase)
+                        sheet.cell(temp_row, 18, obj.last_year_tax_included)
+                        sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
+                    copy_row_style(sheet, temp_row, template_row)
                     temp_row += 1
-                    residual_electricity_non_natural_person_list = \
-                        MonthEndReport.residualElectricityNonNaturalPersonList
+                current_status = "None"
 
-                    for value in residual_electricity_non_natural_person_list:
-                        num += 1
-                        row_one = rows + "-" + str(num)
-                        sheet.cell(temp_row, 2, prefix + value.name)
-                        sheet.cell(temp_row, 3, row_one)
-                        sheet.cell(temp_row, 4, value.sap_name)
+            elif current_status == "垃圾焚烧":
+                map_len = len(MonthEndReport.WasteIncinerationList)
+                sheet.insert_rows(row, map_len)
+                num = 0
+                template_row = row - 1
+                rows = str(sheet.cell(row - 1, 3).value)
+                waste_incineration_list = MonthEndReport.WasteIncinerationList
+                temp_row = row
+                for key in waste_incineration_list.keys():
+                    value = waste_incineration_list.get(key)
+                    num += 1
+                    if value is None:
+                        value = HydropowerTotal(key, 0, 0, 0, "", key, "")
 
-                        sheet.cell(temp_row, 5, "其他")
-                        sheet.cell(temp_row, 6, value.unit_capacity)
-                        sheet.cell(temp_row, 11, value.power_purchase)
-                        sheet.cell(temp_row, 17, value.tax_included)
-                        sheet.cell(temp_row, 20, value.tax_excluding)
-                        obj = last_year_map_list.get(value.name, None)
-                        if obj is None:
-                            sheet.cell(temp_row, 12, 0)
-                            sheet.cell(temp_row, 18, 0)
-                            sheet.cell(temp_row, 21, 0)
-                        else:
-                            sheet.cell(temp_row, 12, obj.last_year_power_purchase)
-                            sheet.cell(temp_row, 18, obj.last_year_tax_included)
-                            sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
-                        copy_row_style(sheet, temp_row, template_row)
-                        temp_row += 1
-                    sheet.row_dimensions[temp_row].height = sheet.row_dimensions[template_row].height
-                    current_status = "None"
-
-                case "全额上网":
-                    sheet.row_dimensions[row].height = sheet.row_dimensions[row - 2].height
-                    sheet.row_dimensions[row - 1].height = sheet.row_dimensions[row - 2].height
-
-                    # 当前行是 其中自然人
-                    map_len = len(MonthEndReport.fullOnlineNaturalPersonList)
-                    sheet.insert_rows(row + 1, map_len)
-                    num = 0
-                    template_row = row
-                    rows = str(sheet.cell(row, 3).value)
-                    full_online_natural_person_list = MonthEndReport.fullOnlineNaturalPersonList
-                    temp_row = row + 1
-                    for value in full_online_natural_person_list:
-                        num += 1
-                        row_one = rows + "-" + str(num)
-                        sheet.cell(temp_row, 2, prefix + value.name)
-                        sheet.cell(temp_row, 3, row_one)
-                        sheet.cell(temp_row, 4, value.sap_name)
-                        sheet.cell(temp_row, 5, "其他")
-                        sheet.cell(temp_row, 6, value.unit_capacity)
-                        sheet.cell(temp_row, 11, value.power_purchase)
-                        sheet.cell(temp_row, 17, value.tax_included)
-                        sheet.cell(temp_row, 20, value.tax_excluding)
-                        obj = last_year_map_list.get(value.name, None)
-                        if obj is None:
-                            sheet.cell(temp_row, 12, 0)
-                            sheet.cell(temp_row, 18, 0)
-                            sheet.cell(temp_row, 21, 0)
-                        else:
-                            sheet.cell(temp_row, 12, obj.last_year_power_purchase)
-                            sheet.cell(temp_row, 18, obj.last_year_tax_included)
-                            sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
-                        copy_row_style(sheet, temp_row, template_row)
-                        temp_row += 1
-                    sheet.row_dimensions[temp_row].height = sheet.row_dimensions[template_row].height
-                    # 当前行是非自然人
-                    map_len = len(MonthEndReport.fullOnlineNonNaturalPersonList)
-                    sheet.insert_rows(temp_row + 1, map_len)
-                    num = 0
-                    rows = str(sheet.cell(temp_row, 3).value)
+                    row_one = rows + "-" + str(num)
+                    sheet.cell(temp_row, 2, prefix + value.name)
+                    sheet.cell(temp_row, 3, row_one)
+                    sheet.cell(temp_row, 4, value.sap_name)
+                    sheet.cell(temp_row, 5, "其他")
+                    sheet.cell(temp_row, 6, value.unit_capacity)
+                    sheet.cell(temp_row, 11, float(value.power_purchase) / 10000)
+                    sheet.cell(temp_row, 17, value.tax_included)
+                    sheet.cell(temp_row, 20, value.tax_excluding)
+                    obj = last_year_map_list.get(key, None)
+                    if obj is None:
+                        sheet.cell(temp_row, 12, 0)
+                        sheet.cell(temp_row, 18, 0)
+                        sheet.cell(temp_row, 21, 0)
+                    else:
+                        sheet.cell(temp_row, 12, obj.last_year_power_purchase)
+                        sheet.cell(temp_row, 18, obj.last_year_tax_included)
+                        sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
+                    copy_row_style(sheet, temp_row, template_row)
                     temp_row += 1
-                    full_online_non_natural_person_list = MonthEndReport.fullOnlineNonNaturalPersonList
-                    for value in full_online_non_natural_person_list:
-                        num += 1
-                        row_one = rows + "-" + str(num)
-                        sheet.cell(temp_row, 2, prefix + value.name)
-                        sheet.cell(temp_row, 3, row_one)
-                        sheet.cell(temp_row, 4, value.sap_name)
-                        sheet.cell(temp_row, 5, "其他")
-                        sheet.cell(temp_row, 6, value.unit_capacity)
-                        sheet.cell(temp_row, 11, value.power_purchase)
-                        sheet.cell(temp_row, 17, value.tax_included)
-                        sheet.cell(temp_row, 20, value.tax_excluding)
-                        obj = last_year_map_list.get(value.name, None)
-                        if obj is None:
-                            sheet.cell(temp_row, 12, 0)
-                            sheet.cell(temp_row, 18, 0)
-                            sheet.cell(temp_row, 21, 0)
-                        else:
-                            sheet.cell(temp_row, 12, obj.last_year_power_purchase)
-                            sheet.cell(temp_row, 18, obj.last_year_tax_included)
-                            sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
-                        copy_row_style(sheet, temp_row, template_row)
-                        temp_row += 1
-                    sheet.row_dimensions[temp_row].height = sheet.row_dimensions[template_row].height
-                    break
+                current_status = "None"
+
+                pass
+            elif current_status == "自发自用，余电上网":
+                # 当前行是 其中自然人
+                map_len = len(MonthEndReport.residualElectricityNaturalPersonList)
+                sheet.insert_rows(row + 1, map_len)
+                num = 0
+                template_row = row
+                rows = str(sheet.cell(row, 3).value)
+                residual_electricity_natural_person_list = MonthEndReport.residualElectricityNaturalPersonList
+                temp_row = row + 1
+                for value in residual_electricity_natural_person_list:
+                    num += 1
+                    row_one = rows + "-" + str(num)
+                    sheet.cell(temp_row, 2, prefix + value.name)
+                    sheet.cell(temp_row, 3, row_one)
+                    sheet.cell(temp_row, 4, value.sap_name)
+                    sheet.cell(temp_row, 5, "其他")
+                    sheet.cell(temp_row, 6, value.unit_capacity)
+                    sheet.cell(temp_row, 11, value.power_purchase)
+                    sheet.cell(temp_row, 17, value.tax_included)
+                    sheet.cell(temp_row, 20, value.tax_excluding)
+                    obj = last_year_map_list.get(value.name, None)
+                    if obj is None:
+                        sheet.cell(temp_row, 12, 0)
+                        sheet.cell(temp_row, 18, 0)
+                        sheet.cell(temp_row, 21, 0)
+                    else:
+                        sheet.cell(temp_row, 12, obj.last_year_power_purchase)
+                        sheet.cell(temp_row, 18, obj.last_year_tax_included)
+                        sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
+                    copy_row_style(sheet, temp_row, template_row)
+                    temp_row += 1
+
+                # 当前行是非自然人
+
+                sheet.row_dimensions[temp_row].height = sheet.row_dimensions[template_row].height
+                map_len = len(MonthEndReport.residualElectricityNonNaturalPersonList)
+                sheet.insert_rows(temp_row + 1, map_len)
+
+                num = 0
+                rows = str(sheet.cell(temp_row, 3).value)
+                temp_row += 1
+                residual_electricity_non_natural_person_list = \
+                    MonthEndReport.residualElectricityNonNaturalPersonList
+
+                for value in residual_electricity_non_natural_person_list:
+                    num += 1
+                    row_one = rows + "-" + str(num)
+                    sheet.cell(temp_row, 2, prefix + value.name)
+                    sheet.cell(temp_row, 3, row_one)
+                    sheet.cell(temp_row, 4, value.sap_name)
+
+                    sheet.cell(temp_row, 5, "其他")
+                    sheet.cell(temp_row, 6, value.unit_capacity)
+                    sheet.cell(temp_row, 11, value.power_purchase)
+                    sheet.cell(temp_row, 17, value.tax_included)
+                    sheet.cell(temp_row, 20, value.tax_excluding)
+                    obj = last_year_map_list.get(value.name, None)
+                    if obj is None:
+                        sheet.cell(temp_row, 12, 0)
+                        sheet.cell(temp_row, 18, 0)
+                        sheet.cell(temp_row, 21, 0)
+                    else:
+                        sheet.cell(temp_row, 12, obj.last_year_power_purchase)
+                        sheet.cell(temp_row, 18, obj.last_year_tax_included)
+                        sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
+                    copy_row_style(sheet, temp_row, template_row)
+                    temp_row += 1
+                sheet.row_dimensions[temp_row].height = sheet.row_dimensions[template_row].height
+                current_status = "None"
+
+            elif current_status == "全额上网":
+                sheet.row_dimensions[row].height = sheet.row_dimensions[row - 2].height
+                sheet.row_dimensions[row - 1].height = sheet.row_dimensions[row - 2].height
+
+                # 当前行是 其中自然人
+                map_len = len(MonthEndReport.fullOnlineNaturalPersonList)
+                sheet.insert_rows(row + 1, map_len)
+                num = 0
+                template_row = row
+                rows = str(sheet.cell(row, 3).value)
+                full_online_natural_person_list = MonthEndReport.fullOnlineNaturalPersonList
+                temp_row = row + 1
+                for value in full_online_natural_person_list:
+                    num += 1
+                    row_one = rows + "-" + str(num)
+                    sheet.cell(temp_row, 2, prefix + value.name)
+                    sheet.cell(temp_row, 3, row_one)
+                    sheet.cell(temp_row, 4, value.sap_name)
+                    sheet.cell(temp_row, 5, "其他")
+                    sheet.cell(temp_row, 6, value.unit_capacity)
+                    sheet.cell(temp_row, 11, value.power_purchase)
+                    sheet.cell(temp_row, 17, value.tax_included)
+                    sheet.cell(temp_row, 20, value.tax_excluding)
+                    obj = last_year_map_list.get(value.name, None)
+                    if obj is None:
+                        sheet.cell(temp_row, 12, 0)
+                        sheet.cell(temp_row, 18, 0)
+                        sheet.cell(temp_row, 21, 0)
+                    else:
+                        sheet.cell(temp_row, 12, obj.last_year_power_purchase)
+                        sheet.cell(temp_row, 18, obj.last_year_tax_included)
+                        sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
+                    copy_row_style(sheet, temp_row, template_row)
+                    temp_row += 1
+                sheet.row_dimensions[temp_row].height = sheet.row_dimensions[template_row].height
+                # 当前行是非自然人
+                map_len = len(MonthEndReport.fullOnlineNonNaturalPersonList)
+                sheet.insert_rows(temp_row + 1, map_len)
+                num = 0
+                rows = str(sheet.cell(temp_row, 3).value)
+                temp_row += 1
+                full_online_non_natural_person_list = MonthEndReport.fullOnlineNonNaturalPersonList
+                for value in full_online_non_natural_person_list:
+                    num += 1
+                    row_one = rows + "-" + str(num)
+                    sheet.cell(temp_row, 2, prefix + value.name)
+                    sheet.cell(temp_row, 3, row_one)
+                    sheet.cell(temp_row, 4, value.sap_name)
+                    sheet.cell(temp_row, 5, "其他")
+                    sheet.cell(temp_row, 6, value.unit_capacity)
+                    sheet.cell(temp_row, 11, value.power_purchase)
+                    sheet.cell(temp_row, 17, value.tax_included)
+                    sheet.cell(temp_row, 20, value.tax_excluding)
+                    obj = last_year_map_list.get(value.name, None)
+                    if obj is None:
+                        sheet.cell(temp_row, 12, 0)
+                        sheet.cell(temp_row, 18, 0)
+                        sheet.cell(temp_row, 21, 0)
+                    else:
+                        sheet.cell(temp_row, 12, obj.last_year_power_purchase)
+                        sheet.cell(temp_row, 18, obj.last_year_tax_included)
+                        sheet.cell(temp_row, 21, obj.last_year_tax_excluding)
+                    copy_row_style(sheet, temp_row, template_row)
+                    temp_row += 1
+                sheet.row_dimensions[temp_row].height = sheet.row_dimensions[template_row].height
+                break
     workbook.save(route)
     workbook.close()
 
@@ -531,43 +531,42 @@ def read_hydropower_total(path, list_file_name, wx):
                 continue
             if str(cell_one.value).strip() == "水电合计":
                 status = False
-        match str(cell_one.value).strip():
-            case "汪清凯迪绿色能源开发有限公司":
+        if str(cell_one.value).strip() == "汪清凯迪绿色能源开发有限公司":
 
-                # AgriculturalAndForestryWasteList 农林废弃物
-                agricultural_and_forestry_waste = AgriculturalAndForestryWaste(str(sheet.cell(row, 2).value),
-                                                                               sheet.cell(row, 4).value,
-                                                                               sheet.cell(row, 10).value,
-                                                                               sheet.cell(row, 8).value,
-                                                                               float(sheet.cell(row, 3).value),
-                                                                               str(sheet.cell(row, 2).value), "")
+            # AgriculturalAndForestryWasteList 农林废弃物
+            agricultural_and_forestry_waste = AgriculturalAndForestryWaste(str(sheet.cell(row, 2).value),
+                                                                           sheet.cell(row, 4).value,
+                                                                           sheet.cell(row, 10).value,
+                                                                           sheet.cell(row, 8).value,
+                                                                           float(sheet.cell(row, 3).value),
+                                                                           str(sheet.cell(row, 2).value), "")
 
-                MonthEndReport.AgriculturalAndForestryWasteList[
-                    str(sheet.cell(row, 2).value)] = agricultural_and_forestry_waste
-            case "延吉天楹垃圾电站":
+            MonthEndReport.AgriculturalAndForestryWasteList[
+                str(sheet.cell(row, 2).value)] = agricultural_and_forestry_waste
+        elif str(cell_one.value).strip() == "延吉天楹垃圾电站":
 
-                # 垃圾焚烧 WasteIncinerationList
-                power_purchase = sheet.cell(row, 4).value
-                waste_incineration = WasteIncineration(str(sheet.cell(row, 2).value),
-                                                       power_purchase,
-                                                       sheet.cell(row, 10).value,
-                                                       sheet.cell(row, 8).value,
-                                                       float(sheet.cell(row, 3).value), str(sheet.cell(row, 2).value),
-                                                       "")
-                MonthEndReport.WasteIncinerationList[
-                    str(sheet.cell(row, 2).value)] = waste_incineration
-            case "敦化中能垃圾发电厂":
+            # 垃圾焚烧 WasteIncinerationList
+            power_purchase = sheet.cell(row, 4).value
+            waste_incineration = WasteIncineration(str(sheet.cell(row, 2).value),
+                                                   power_purchase,
+                                                   sheet.cell(row, 10).value,
+                                                   sheet.cell(row, 8).value,
+                                                   float(sheet.cell(row, 3).value), str(sheet.cell(row, 2).value),
+                                                   "")
+            MonthEndReport.WasteIncinerationList[
+                str(sheet.cell(row, 2).value)] = waste_incineration
+        elif str(cell_one.value).strip() == "敦化中能垃圾发电厂":
 
-                # 垃圾焚烧 WasteIncinerationList
-                waste_incineration = WasteIncineration(str(sheet.cell(row, 2).value),
-                                                       sheet.cell(row, 4).value,
-                                                       sheet.cell(row, 10).value,
-                                                       sheet.cell(row, 8).value,
-                                                       float(sheet.cell(row, 3).value), str(sheet.cell(row, 2).value),
-                                                       "")
-                MonthEndReport.WasteIncinerationList[
-                    str(sheet.cell(row, 2).value)] = waste_incineration
-                break
+            # 垃圾焚烧 WasteIncinerationList
+            waste_incineration = WasteIncineration(str(sheet.cell(row, 2).value),
+                                                   sheet.cell(row, 4).value,
+                                                   sheet.cell(row, 10).value,
+                                                   sheet.cell(row, 8).value,
+                                                   float(sheet.cell(row, 3).value), str(sheet.cell(row, 2).value),
+                                                   "")
+            MonthEndReport.WasteIncinerationList[
+                str(sheet.cell(row, 2).value)] = waste_incineration
+            break
     workbook.close()
 
 
@@ -600,12 +599,11 @@ def write_manual_table(path, file_list, name_map_list, name_account_map_list):
             status = "name_account_map_list"
         else:
             continue
-        match status:
-            case "name_map_list":
-                write_data(name_map_list, row, sheet, value)
+        if status == "name_map_list":
+            write_data(name_map_list, row, sheet, value)
 
-            case "name_account_map_list":
-                write_data(name_account_map_list, row, sheet, value)
+        elif status == "name_account_map_list":
+            write_data(name_account_map_list, row, sheet, value)
 
     workbook.save(route)
     workbook.close()
@@ -678,44 +676,43 @@ def read_manual_table(path, file_list):
             task_status = "全额上网-自然人"
             continue
 
-        match task_status:
-            case "余电上网-自然人":
-                account, sap_name = get_name_account(cell)
-                MonthEndReport.residualElectricityNaturalPersonList.append(
-                    ResidualElectricityNaturalPerson(cell.value.strip(), sheet["AQ" + str(row)].value,
-                                                     sheet["AR" + str(row)].value,
-                                                     sheet["AS" + str(row)].value, sheet["C" + str(row)].value,
-                                                     sap_name, account))
-                # 写入公式
-                write_formula(row, sheet)
+        if task_status == "余电上网-自然人":
+            account, sap_name = get_name_account(cell)
+            MonthEndReport.residualElectricityNaturalPersonList.append(
+                ResidualElectricityNaturalPerson(cell.value.strip(), sheet["AQ" + str(row)].value,
+                                                 sheet["AR" + str(row)].value,
+                                                 sheet["AS" + str(row)].value, sheet["C" + str(row)].value,
+                                                 sap_name, account))
+            # 写入公式
+            write_formula(row, sheet)
 
-            case "余电上网-非自然人":
-                account, sap_name = get_name_account(cell)
-                MonthEndReport.residualElectricityNonNaturalPersonList.append(
-                    ResidualElectricityNonNaturalPerson(cell.value.strip(), sheet["AQ" + str(row)].value,
-                                                        sheet["AR" + str(row)].value,
-                                                        sheet["AS" + str(row)].value, sheet["C" + str(row)].value,
-                                                        sap_name, account))
-                # 写入公式
-                write_formula(row, sheet)
-            case "全额上网-自然人":
-                account, sap_name = get_name_account(cell)
-                MonthEndReport.fullOnlineNaturalPersonList.append(
-                    FullOnlineNaturalPerson(cell.value.strip(), sheet["AQ" + str(row)].value,
-                                            sheet["AR" + str(row)].value,
-                                            sheet["AS" + str(row)].value, sheet["C" + str(row)].value,
-                                            sap_name, account))
-                # 写入公式
-                write_formula(row, sheet)
-            case "全额上网-非自然人":
-                account, sap_name = get_name_account(cell)
-                MonthEndReport.fullOnlineNonNaturalPersonList.append(
-                    FullOnlineNonNaturalPerson(cell.value.strip(), sheet["AQ" + str(row)].value,
-                                               sheet["AR" + str(row)].value,
-                                               sheet["AS" + str(row)].value, sheet["C" + str(row)].value,
-                                               sap_name, account))
-                # 写入公式
-                write_formula(row, sheet)
+        elif task_status == "余电上网-非自然人":
+            account, sap_name = get_name_account(cell)
+            MonthEndReport.residualElectricityNonNaturalPersonList.append(
+                ResidualElectricityNonNaturalPerson(cell.value.strip(), sheet["AQ" + str(row)].value,
+                                                    sheet["AR" + str(row)].value,
+                                                    sheet["AS" + str(row)].value, sheet["C" + str(row)].value,
+                                                    sap_name, account))
+            # 写入公式
+            write_formula(row, sheet)
+        elif task_status == "全额上网-自然人":
+            account, sap_name = get_name_account(cell)
+            MonthEndReport.fullOnlineNaturalPersonList.append(
+                FullOnlineNaturalPerson(cell.value.strip(), sheet["AQ" + str(row)].value,
+                                        sheet["AR" + str(row)].value,
+                                        sheet["AS" + str(row)].value, sheet["C" + str(row)].value,
+                                        sap_name, account))
+            # 写入公式
+            write_formula(row, sheet)
+        elif task_status == "全额上网-非自然人":
+            account, sap_name = get_name_account(cell)
+            MonthEndReport.fullOnlineNonNaturalPersonList.append(
+                FullOnlineNonNaturalPerson(cell.value.strip(), sheet["AQ" + str(row)].value,
+                                           sheet["AR" + str(row)].value,
+                                           sheet["AS" + str(row)].value, sheet["C" + str(row)].value,
+                                           sap_name, account))
+            # 写入公式
+            write_formula(row, sheet)
     workbook.save(route)
     workbook.close()
 
